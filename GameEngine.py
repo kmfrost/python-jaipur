@@ -79,7 +79,7 @@ class GameEngine:
                 return False
             success = self._do_trade_cards(tradeIn, tradeOut)
         else: 
-            print(f"Top-level action {top} not recognized! Please choose from {c, s, g, t}.")
+            print(f"Top-level action {top} not recognized! Please choose from c, s, g, t.")
             return False      
         
         if success:
@@ -90,8 +90,48 @@ class GameEngine:
     def _do_take_camels(self):
         pass
     
-    def _do_sell_cards(self, sellIdx):
-        pass
+    def _do_sell_cards(self, sell_idx):
+        # Already checked for empty list / None in do_action
+        # Make sure all indices are in the hand
+        if max(sell_idx) > len(self._players[self.whos_turn].hand):
+            print(f"Index out of range ({max(sell_idx)})! Only {len(self._players[self.whos_turn].hand)} cards in hand!")
+            return False
+        # Check for duplicates
+        if len(sell_idx) != len(set(sell_idx)):
+            print(f"Duplicate indices in sell_idx list! sell_idx = {sell_idx}")
+            return False
+        # Make sure every item listed is the same
+        selling_type = self._players[self.whos_turn].hand[sell_idx[0]]
+        for idx in sell_idx:
+            if self._players[self.whos_turn].hand[idx] != selling_type:
+                print("All items must be the same type!")
+                return False
+        # Make sure type isn't a camel
+        if selling_type == self._types.index("camels"):
+            print("You can't sell camels, you monster!")
+            return False
+        
+        # Do the action
+        for _ in sell_idx:
+            # Remove from hand
+            self._players[self.whos_turn].hand.remove(selling_type)
+
+            # Get the goods tokens
+            if self._tokens[selling_type]: # make sure it's not empty
+                self._players[self.whos_turn].tokens.append(self._tokens[selling_type].pop())
+            
+        # Get a bonus token if applicable
+        try: # try, in case it's out of bonus tokens
+            if len(sell_idx) == 3:
+                self._players[self.whos_turn].bonus_tokens.append(self._bonus_tokens[3].pop())
+            elif len(sell_idx) == 4:
+                self._players[self.whos_turn].bonus_tokens.append(self._bonus_tokens[4].pop())
+            elif len(sell_idx) >= 5:
+                self._players[self.whos_turn].bonus_tokens.append(self._bonus_tokens[5].pop())
+        except IndexError:
+            print(f"Ran out of bonus tokens for n={len(sell_idx)}. Sorry.")
+
+        return True
     
     def _do_grab_card(self, grabIdx):
         pass
@@ -104,5 +144,5 @@ class GameEngine:
         def __init__(self, init_hand):
             self.hand = init_hand
         
-            self.token_total = []
+            self.tokens = []
             self.bonus_tokens = []
