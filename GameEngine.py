@@ -158,13 +158,60 @@ class GameEngine:
         except IndexError:
             print(f"Ran out of bonus tokens for n={len(sell_idx)}. Sorry.")
 
+        print(f"Player {self.whos_turn+1} sold {len(sell_idx)} {self._types[selling_type]}")
+
         return True
     
     def _do_grab_card(self, grabIdx):
         pass
     
-    def _do_trade_cards(self, tradeIn, tradeOut):
-        pass
+    def _do_trade_cards(self, trade_in, trade_out):
+        # Make sure lengths are same
+        if len(trade_in) != len(trade_out):
+            print("Trade in and trade out must be same length!")
+            return False
+        # Make sure len is > 1
+        if len(trade_in) <= 1:
+            print("Must trade at least 2 items with market!")
+            return False
+        # Make sure all indices are in the hand
+        if max(trade_out) > len(self._players[self.whos_turn].hand):
+            print(f"trade_out index out of range ({max(trade_out)})! Only {len(self._players[self.whos_turn].hand)} cards in hand!")
+            return False
+        # Check for duplicates for out
+        if len(trade_out) != len(set(trade_out)):
+            print(f"Duplicate indices in trade_out list! trade_out = {trade_out}")
+            return False
+        # Make sure all indices are in the market
+        if max(trade_in) > len(self._market):
+            print(f"trade_in index out of range ({max(trade_in)})! Only {len(self._market)} cards in market!")
+            return False
+        # Check for duplicates for in
+        if len(trade_in) != len(set(trade_in)):
+            print(f"Duplicate indices in trade_in list! trade_in = {trade_in}")
+            return False
+        # Make sure they're not trying to take camels
+        camel_num = self._types.index("camels")
+        for idx in trade_in:
+            if self._market[idx] == camel_num:
+                print("You can't take camels from the market as part of a trade!")
+                return False
+        # Make sure there's no overlap in the items being traded
+        in_types = [self._market[idx] for idx in trade_in]
+        out_types = [self._players[self.whos_turn].hand[idx] for idx in trade_out]
+        if not set(in_types).isdisjoint(out_types):
+            print(f"You can't have the same item type on both sides of a trade! In types: {in_types}, out types: {out_types}")
+            return False
+        
+        # Do the trade
+        for in_idx, out_idx in zip(trade_in, trade_out):
+            temp = self._players[self.whos_turn].hand[out_idx]
+            self._players[self.whos_turn].hand[out_idx] = self._market[in_idx]
+            self._market[in_idx] = temp
+
+        print(f"Player {self.whos_turn+1} traded {[self._types[idx] for idx in out_types]} for {[self._types[idx] for idx in in_types]}.")
+
+        return True
     
 
     class PlayerState():
