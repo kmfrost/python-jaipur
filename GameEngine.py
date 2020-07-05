@@ -1,3 +1,4 @@
+import numpy as np
 import random
 class GameEngine:
     def __init__(self):
@@ -79,7 +80,7 @@ class GameEngine:
                 return False
             success = self._do_trade_cards(tradeIn, tradeOut)
         else: 
-            print(f"Top-level action {top} not recognized! Please choose from {c, s, g, t}.")
+            print(f"Top-level action {top} not recognized! Please choose from: c, s, g, t.")
             return False      
         
         if success:
@@ -88,7 +89,33 @@ class GameEngine:
         return success
     
     def _do_take_camels(self):
-        pass
+        camel_idx = self._types.index("camels")
+        
+        # Find the current market indices where there are camels
+        market_camels = np.where(np.array(self._market) == camel_idx)[0]
+        
+        # Validate that there are camels available to take
+        if len(market_camels) == 0:
+            print("No camels are available to take from the market.")
+            return False
+        
+        # Add the camels to the player's hand and replenish the market from the deck
+        for _ in market_camels:
+            self._players[self.whos_turn].hand.append(camel_idx)
+            try:
+                self._market.append(self._deck.pop())
+            except IndexError:
+                print("Deck is empty and cannot replenish the market - the game is over.")
+
+        # Then delete the original camels from the market
+        self._market = [v for i, v in enumerate(self._market) if i not in market_camels]
+                
+        # Sort the player's hand
+        self._players[self.whos_turn].hand.sort()
+        
+        # Everything went well, print the result and return true
+        print(f"Player {self.whos_turn + 1} took {len(market_camels)} camels.")
+        return True
     
     def _do_sell_cards(self, sellIdx):
         pass
@@ -103,6 +130,7 @@ class GameEngine:
     class PlayerState():
         def __init__(self, init_hand):
             self.hand = init_hand
-        
+            self.hand.sort()
+
             self.token_total = []
             self.bonus_tokens = []
