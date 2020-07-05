@@ -64,10 +64,10 @@ class GameEngine:
         enemy = self._players[self.whos_turn ^ 1]
         return {
             "num_deck" : len(self._deck),
-            "market" : self._market,
+            "market" : [self._types[idx] for idx in self._market],
             "tokens_left" : self._tokens,
             "bonus_num_left" : {key:len(value) for key,value in self._bonus_tokens.items()},
-            "my_hand" : me.hand,
+            "my_hand" : [self._types[idx] for idx in me.hand],
             "my_tokens" : me.tokens,
             "my_bonus_num_tokens" : {key:len(value) for key,value in me.bonus_tokens.items()},
             "enemy_num_goods" : enemy.num_cards(),
