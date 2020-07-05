@@ -57,16 +57,16 @@ class GameEngine:
     def get_last_action(self):
         pass
     
-    def do_action(self, top, sellItem=None, sellNum=None, grabIdx=None, tradeIn=None, tradeOut=None):
+    def do_action(self, top, sellIdx=None, grabIdx=None, tradeIn=None, tradeOut=None):
         if top == "c":
             # Selcts the "take camels" action
             success = self._do_take_camels()
         elif top == "s":
             # Selects the "sell" action
-            if not sellItem or not sellNum:
-                # Need these values to complete the sell action
+            if not sellIdx:
+                # Need the sell index value to complete the sell action
                 return False
-            success = self._do_sell_cards(sellItem, sellNum)
+            success = self._do_sell_cards(sellIdx)
         elif top == "g":
             # Selects the "grab" action
             if not grabIdx:
@@ -90,7 +90,7 @@ class GameEngine:
     def _do_take_camels(self):
         pass
     
-    def _do_sell_cards(self, sellItem, sellNum):
+    def _do_sell_cards(self, sellIdx):
         pass
     
     def _do_grab_card(self, grabIdx):
