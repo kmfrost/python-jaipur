@@ -91,6 +91,9 @@ class GameEngine:
             return False      
         
         if success:
+            # Sort the player's hand
+            self._players[self.whos_turn].hand.sort()
+            
             # Flip whos turn it is
             self.whos_turn = self.whos_turn ^ 1
             self._last_action = [top, sell_idx, grab_idx, trade_in, trade_out]
@@ -115,9 +118,6 @@ class GameEngine:
 
         # Then delete the original camels from the market
         self._market = [v for i, v in enumerate(self._market) if i not in market_camels]
-                
-        # Sort the player's hand
-        self._players[self.whos_turn].hand.sort()
         
         # Everything went well, print the result and return true
         print(f"Player {self.whos_turn + 1} took {len(market_camels)} camels.")
@@ -176,9 +176,6 @@ class GameEngine:
         card_type = self._market.pop(grab_idx)
         self._players[self.whos_turn].hand.append(card_type)
         self._replenish_market()
-        
-        # Sort the player's hand
-        self._players[self.whos_turn].hand.sort()
         
         # Everything went well, print the result and return true
         print(f"Player {self.whos_turn + 1} grabbed card {grab_idx}, a {self._types[card_type]}.")
