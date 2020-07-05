@@ -10,6 +10,7 @@ class GameEngine:
         self._market = None
         self._players = None
         self.whos_turn = None
+        self._last_action = None
         
         self._reset()
 
@@ -48,10 +49,15 @@ class GameEngine:
         
     def is_done(self):
         # Mark the number of empty stacks 
-        empty_stacks = [1 for l in self._tokens.values() if not l]
+        empty_stacks = sum([1 for l in self._tokens.values() if not l]) > 3
+        if empty_stacks:
+            print("3 of the goods stacks are empty. The game is now over.")
+        
+        empty_deck = len(self._deck) == 0
+        if empty_deck:
+            print("The deck is now empty. The game is over.")
 
-        # The game is over if there are at least 3 empty token stacks
-        return sum(empty_stacks) >= 3
+        return (empty_stacks or empty_deck)
         
     def get_state(self):
         me = self._players[self.whos_turn]
@@ -71,7 +77,7 @@ class GameEngine:
         }
         
     def get_last_action(self):
-        pass
+        return self._last_action
     
     def do_action(self, top, sell_idx=None, grab_idx=None, trade_in=None, trade_out=None):
         if top == "c":
@@ -99,8 +105,12 @@ class GameEngine:
             return False      
         
         if success:
+            # Sort the player's hand
+            self._players[self.whos_turn].hand.sort()
+            
             # Flip whos turn it is
             self.whos_turn = self.whos_turn ^ 1
+            self._last_action = [top, sell_idx, grab_idx, trade_in, trade_out]
             print(f"It is now Player {self.whos_turn + 1}'s turn.")
         return success
     
@@ -122,9 +132,6 @@ class GameEngine:
 
         # Then delete the original camels from the market
         self._market = [v for i, v in enumerate(self._market) if i not in market_camels]
-                
-        # Sort the player's hand
-        self._players[self.whos_turn].hand.sort()
         
         # Everything went well, print the result and return true
         print(f"Player {self.whos_turn + 1} took {len(market_camels)} camels.")
@@ -183,9 +190,6 @@ class GameEngine:
         card_type = self._market.pop(grab_idx)
         self._players[self.whos_turn].hand.append(card_type)
         self._replenish_market()
-        
-        # Sort the player's hand
-        self._players[self.whos_turn].hand.sort()
         
         # Everything went well, print the result and return true
         print(f"Player {self.whos_turn + 1} grabbed card {grab_idx}, a {self._types[card_type]}.")
