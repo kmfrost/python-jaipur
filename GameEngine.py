@@ -1,13 +1,14 @@
 import numpy as np
 import random
 class GameEngine:
+    _types = ["leather", "spice", "cloth", "silver", "gold", "diamond", "camels"]
+
     def __init__(self):
         self._tokens = None
         self._bonus_tokens = None
         self._deck = None
         self._market = None
         self._players = None
-        self._types = ["leather", "spice", "cloth", "silver", "gold", "diamonds", "camels"]
         self.whos_turn = None
         
         self._reset()
@@ -58,27 +59,27 @@ class GameEngine:
     def get_last_action(self):
         pass
     
-    def do_action(self, top, sellIdx=None, grabIdx=None, tradeIn=None, tradeOut=None):
+    def do_action(self, top, sell_idx=None, grab_idx=None, trade_in=None, trade_out=None):
         if top == "c":
             # Selcts the "take camels" action
             success = self._do_take_camels()
         elif top == "s":
             # Selects the "sell" action
-            if not sellIdx:
+            if not sell_idx:
                 # Need the sell index value to complete the sell action
                 return False
-            success = self._do_sell_cards(sellIdx)
+            success = self._do_sell_cards(sell_idx)
         elif top == "g":
             # Selects the "grab" action
-            if not grabIdx:
+            if grab_idx is None:
                 # Need the grab index value to complete the grab action
                 return False
-            success = self._do_grab_card(grabIdx)
+            success = self._do_grab_card(grab_idx)
         elif top == "t":
-            if not tradeIn or not tradeOut:
+            if not trade_in or not trade_out:
                 # Need the trade in indices and trade out indices to complete the trade action
                 return False
-            success = self._do_trade_cards(tradeIn, tradeOut)
+            success = self._do_trade_cards(trade_in, trade_out)
         else: 
             print(f"Top-level action {top} not recognized! Please choose from: c, s, g, t.")
             return False      
@@ -86,6 +87,7 @@ class GameEngine:
         if success:
             # Flip whos turn it is
             self.whos_turn = self.whos_turn ^ 1
+            print(f"It is now Player {self.whos_turn + 1}'s turn.")
         return success
     
     def _do_take_camels(self):
@@ -102,10 +104,7 @@ class GameEngine:
         # Add the camels to the player's hand and replenish the market from the deck
         for _ in market_camels:
             self._players[self.whos_turn].hand.append(camel_idx)
-            try:
-                self._market.append(self._deck.pop())
-            except IndexError:
-                print("Deck is empty and cannot replenish the market - the game is over.")
+            self._replenish_market()        
 
         # Then delete the original camels from the market
         self._market = [v for i, v in enumerate(self._market) if i not in market_camels]
@@ -160,12 +159,33 @@ class GameEngine:
 
         return True
     
-    def _do_grab_card(self, grabIdx):
-        pass
+    def _do_grab_card(self, grab_idx):
+        if self._players[self.whos_turn].num_cards() == 7:
+            print(f"Player {self.whos_turn + 1} already has 7 cards in their hand. Pick a different action.")
+            return False
+        
+        card_type = self._market.pop(grab_idx)
+        self._players[self.whos_turn].hand.append(card_type)
+        self._replenish_market()
+        
+        # Sort the player's hand
+        self._players[self.whos_turn].hand.sort()
+        
+        # Everything went well, print the result and return true
+        print(f"Player {self.whos_turn + 1} grabbed card {grab_idx}, a {self._types[card_type]}.")
+        return True
     
     def _do_trade_cards(self, tradeIn, tradeOut):
         pass
     
+    
+    def _replenish_market(self):
+        try:
+            self._market.append(self._deck.pop())
+        except IndexError:
+            print("Deck is empty and cannot replenish the market - the game is over.")
+
+
 
     class PlayerState():
         def __init__(self, init_hand):
@@ -174,3 +194,7 @@ class GameEngine:
 
             self.tokens = []
             self.bonus_tokens = []
+        
+        def num_cards(self):
+            # Return the number of non-camel cards (assumes the camels are the highest-index)
+            return sum(i < GameEngine._types.index("camels") for i in self.hand)
