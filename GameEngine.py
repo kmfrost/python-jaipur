@@ -5,20 +5,20 @@ class GameEngine:
         self._bonus_tokens = None
         self._deck = None
         self._market = None
-        self._player1 = None
-        self._player2 = None
+        self._players = None
         self._types = ["leather", "spice", "cloth", "silver", "gold", "diamonds", "camels"]
+        self.whos_turn = None
         
         self._reset()
 
     def _reset(self):
         self._tokens = {
-            "leather": [1, 1, 1, 1, 1, 1, 2, 3, 4],
-            "spice": [1, 1, 2, 2, 3 ,3, 5],
-            "cloth": [1, 1, 2, 2, 3, 3, 5],
-            "silver": [5, 5, 5, 5, 5],
-            "gold": [5, 5, 5, 6, 6],
-            "diamonds": [5, 5, 5, 7, 7]
+            0: [1, 1, 1, 1, 1, 1, 2, 3, 4],  # leather
+            1: [1, 1, 2, 2, 3 ,3, 5],  # spice
+            2: [1, 1, 2, 2, 3, 3, 5],  # cloth
+            3: [5, 5, 5, 5, 5],  # silver
+            4: [5, 5, 5, 6, 6],  # gold
+            5: [5, 5, 5, 7, 7]  # diamonds
         }
     
         self._bonus_tokens = {
@@ -38,18 +38,25 @@ class GameEngine:
         
         # Create the market (cards in the middle) and deal out each player's hand
         self._market = [self._types.index("camels")]*3 + [self._deck.pop()] + [self._deck.pop()]
-        self._player_1 = self.PlayerState([self._deck.pop() for _ in range(5)])
-        self._player_2 = self.PlayerState([self._deck.pop() for _ in range(5)])
+        self._players = [self.PlayerState([self._deck.pop() for _ in range(5)]), self.PlayerState([self._deck.pop() for _ in range(5)])]
+        
+        self.whos_turn = random.choice([0, 1])
+        print(f"Player {self.whos_turn + 1} goes first!")
 
         
-    def get_data(self):
+    def is_done(self):
+        return None
+        
+    def get_state(self):
         pass
         
     def get_last_action(self):
         pass
     
     def do_action(self):
-        pass
+        
+        # Flip whos turn it is
+        self.whos_turn = self.whos_turn ^ 1
     
     def _do_take_camels(self):
         pass
