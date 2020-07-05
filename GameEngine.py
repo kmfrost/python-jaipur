@@ -45,7 +45,11 @@ class GameEngine:
 
         
     def is_done(self):
-        return None
+        # Mark the number of empty stacks 
+        empty_stacks = [1 for l in self._tokens.values() if not l]
+
+        # The game is over if there are at least 3 empty token stacks
+        return sum(empty_stacks) >= 3
         
     def get_state(self):
         pass
@@ -53,21 +57,46 @@ class GameEngine:
     def get_last_action(self):
         pass
     
-    def do_action(self):
+    def do_action(self, top, sellItem=None, sellNum=None, grabIdx=None, tradeIn=None, tradeOut=None):
+        if top == "c":
+            # Selcts the "take camels" action
+            success = self._do_take_camels()
+        elif top == "s":
+            # Selects the "sell" action
+            if not sellItem or not sellNum:
+                # Need these values to complete the sell action
+                return False
+            success = self._do_sell_cards(sellItem, sellNum)
+        elif top == "g":
+            # Selects the "grab" action
+            if not grabIdx:
+                # Need the grab index value to complete the grab action
+                return False
+            success = self._do_grab_card(grabIdx)
+        elif top == "t":
+            if not tradeIn or not tradeOut:
+                # Need the trade in indices and trade out indices to complete the trade action
+                return False
+            success = self._do_trade_cards(tradeIn, tradeOut)
+        else: 
+            print(f"Top-level action {top} not recognized! Please choose from {c, s, g, t}.")
+            return False      
         
-        # Flip whos turn it is
-        self.whos_turn = self.whos_turn ^ 1
+        if success:
+            # Flip whos turn it is
+            self.whos_turn = self.whos_turn ^ 1
+        return success
     
     def _do_take_camels(self):
         pass
     
-    def _do_sell_cards(self):
+    def _do_sell_cards(self, sellItem, sellNum):
         pass
     
-    def _do_grab_card(self):
+    def _do_grab_card(self, grabIdx):
         pass
     
-    def _do_trade_cards(self):
+    def _do_trade_cards(self, tradeIn, tradeOut):
         pass
     
 
