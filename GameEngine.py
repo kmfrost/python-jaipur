@@ -54,7 +54,21 @@ class GameEngine:
         return sum(empty_stacks) >= 3
         
     def get_state(self):
-        pass
+        me = self._players[self.whos_turn]
+        enemy = self._players[self.whos_turn ^ 1]
+        return {
+            "num_deck" : len(self._deck),
+            "market" : self._market,
+            "tokens_left" : self._tokens,
+            "bonus_num_left" : {key:len(value) for key,value in self._bonus_tokens.items()},
+            "my_hand" : me.hand,
+            "my_tokens" : me.tokens,
+            "my_bonus_num_tokens" : {key:len(value) for key,value in me.bonus_tokens.items()},
+            "enemy_num_goods" : enemy.num_cards(),
+            "enemy_num_camels" : (len(enemy.hand) - enemy.num_cards()),
+            "enemy_tokens" : enemy.tokens,
+            "enemy_bonus_num_tokens" : {key:len(value) for key,value in enemy.bonus_tokens.items()},
+        }
         
     def get_last_action(self):
         pass
@@ -149,11 +163,11 @@ class GameEngine:
         # Get a bonus token if applicable
         try: # try, in case it's out of bonus tokens
             if len(sell_idx) == 3:
-                self._players[self.whos_turn].bonus_tokens.append(self._bonus_tokens[3].pop())
+                self._players[self.whos_turn].bonus_tokens[3].append(self._bonus_tokens[3].pop())
             elif len(sell_idx) == 4:
-                self._players[self.whos_turn].bonus_tokens.append(self._bonus_tokens[4].pop())
+                self._players[self.whos_turn].bonus_tokens[4].append(self._bonus_tokens[4].pop())
             elif len(sell_idx) >= 5:
-                self._players[self.whos_turn].bonus_tokens.append(self._bonus_tokens[5].pop())
+                self._players[self.whos_turn].bonus_tokens[5].append(self._bonus_tokens[5].pop())
         except IndexError:
             print(f"Ran out of bonus tokens for n={len(sell_idx)}. Sorry.")
 
@@ -240,7 +254,11 @@ class GameEngine:
             self.hand.sort()
 
             self.tokens = []
-            self.bonus_tokens = []
+            self.bonus_tokens = {
+                3 : [],
+                4 : [],
+                5 : []
+            }
         
         def num_cards(self):
             # Return the number of non-camel cards (assumes the camels are the highest-index)
