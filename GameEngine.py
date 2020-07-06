@@ -65,7 +65,7 @@ class GameEngine:
         return {
             "num_deck" : len(self._deck),
             "market" : [self._types[idx] for idx in self._market],
-            "tokens_left" : self._tokens,
+            "tokens_left" : {self._types[key]:value for key,value in self._tokens},
             "bonus_num_left" : {key:len(value) for key,value in self._bonus_tokens.items()},
             "my_hand" : [self._types[idx] for idx in me.hand],
             "my_tokens" : me.tokens,
@@ -78,6 +78,60 @@ class GameEngine:
         
     def get_last_action(self):
         return self._last_action
+
+    def get_scores(self):
+        if not self.is_done():
+            print("Warning! This 'get_scores' function is only meant to be called at the end of the game!")
+            # only return the known (to the players) token sums
+            return [sum(self._players[0].tokens), sum(self._players[1].tokens)]
+        else:
+            score0 = sum(self._players[0].tokens) + sum([sum(value) for key,value in self._players[0].bonus_tokens.items()])
+            score1 = sum(self._players[1].tokens) + sum([sum(value) for key,value in self._players[1].bonus_tokens.items()])
+
+            camels0 = self._players[0].hand.count(self._types.index("camels"))
+            camels1 = self._players[1].hand.count(self._types.index("camels"))
+            if camels0 > camels1:
+                score0 = score0 + 5
+                print(f"Player 1 got the camel bonus ({camels0} vs {camels1} camels).")
+            elif camels1 > camels0:
+                score1 = score1 + 5
+                print(f"Player 2 got the camel bonus ({camels0} vs {camels1} camels).")
+            else:
+                print(f"Players tied for number of camels ({camels0} vs {camels1}).")
+
+            winner = None
+            if score0 > score1:
+                print(f"Player 1 won! ({score0} to {score1})")
+                winner = 0
+            elif score1 > score0:
+                print(f"Player 2 won! ({score0} to {score1})")
+                winner = 1
+            else:
+                print(f"Players tied! ({score0} to {score1})")
+                num_bonus0 = sum([len(value) for key,value in self._players[0].bonus_tokens.items()])
+                num_bonus1 = sum([len(value) for key,value in self._players[1].bonus_tokens.items()])
+                if num_bonus0 > num_bonus1:
+                    print(f"TIEBREAKER: Player 1 won! ({num_bonus0} vs {num_bonus1} bonus tokens)")
+                    winner = 0
+                elif num_bonus1 > num_bonus0:
+                    print(f"TIEBREAKER: Player 2 won! ({num_bonus0} vs {num_bonus1} bonus tokens)")
+                    winner = 1
+                else:
+                    print(f"TIEBREAKER: Players tied for number of bonus tokens! ({num_bonus0} vs {num_bonus1})")
+                    num_tokens0 = len(self._players[0].tokens)
+                    num_tokens1 = len(self._players[1].tokens)
+                    if num_tokens0 > num_tokens1:
+                        print(f"2ND TIEBREAKER: Player 1 won! ({num_tokens0} vs {num_tokens1} tokens)")
+                        winner = 0
+                    elif num_tokens1 > num_tokens0:
+                        print(f"2ND TIEBREAKER: Player 2 won! ({num_tokens0} vs {num_tokens1} tokens)")
+                        winner = 1
+                    else:
+                        print(f"2ND TIEBREAKER: Players tied for number of tokens! ({num_tokens0} vs {num_tokens1} tokens)")
+                        print("You must share the victory")
+                        winner = None
+            # return the score list, and index of winning player
+            return ([score0, score1], winner)
     
     def do_action(self, top, sell_idx=None, grab_idx=None, trade_in=None, trade_out=None):
         if top == "c":
