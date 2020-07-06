@@ -1,7 +1,7 @@
 import numpy as np
 import random
 class GameEngine:
-    _types = ["leather", "spice", "cloth", "silver", "gold", "diamond", "camels"]
+    _types = ["leather", "spice", "cloth", "silver", "gold", "diamond", "camel"]
 
     def __init__(self):
         self._tokens = None
@@ -40,7 +40,7 @@ class GameEngine:
         random.shuffle(self._deck)
         
         # Create the market (cards in the middle) and deal out each player's hand
-        self._market = [self._types.index("camels")]*3 + [self._deck.pop()] + [self._deck.pop()]
+        self._market = [self._types.index("camel")]*3 + [self._deck.pop()] + [self._deck.pop()]
         self._players = [self.PlayerState([self._deck.pop() for _ in range(5)]), self.PlayerState([self._deck.pop() for _ in range(5)])]
         
         self.whos_turn = random.choice([0, 1])
@@ -110,12 +110,18 @@ class GameEngine:
             
             # Flip whos turn it is
             self.whos_turn = self.whos_turn ^ 1
-            self._last_action = [top, sell_idx, grab_idx, trade_in, trade_out]
+            self._last_action = {
+                "top": top,
+                "sell_idx": sell_idx,
+                "grab_idx": grab_idx,
+                "trade_in": trade_in,
+                "trade_out": trade_out
+                }
             print(f"It is now Player {self.whos_turn + 1}'s turn.")
         return success
     
     def _do_take_camels(self):
-        camel_idx = self._types.index("camels")
+        camel_idx = self._types.index("camel")
         
         # Find the current market indices where there are camels
         market_camels = np.where(np.array(self._market) == camel_idx)[0]
@@ -154,7 +160,7 @@ class GameEngine:
                 print("All items must be the same type!")
                 return False
         # Make sure type isn't a camel
-        if selling_type == self._types.index("camels"):
+        if selling_type == self._types.index("camel"):
             print("You can't sell camels, you monster!")
             return False
         
@@ -221,7 +227,7 @@ class GameEngine:
             print(f"Duplicate indices in trade_in list! trade_in = {trade_in}")
             return False
         # Make sure they're not trying to take camels
-        camel_num = self._types.index("camels")
+        camel_num = self._types.index("camel")
         for idx in trade_in:
             if self._market[idx] == camel_num:
                 print("You can't take camels from the market as part of a trade!")
@@ -266,4 +272,4 @@ class GameEngine:
         
         def num_cards(self):
             # Return the number of non-camel cards (assumes the camels are the highest-index)
-            return sum(i < GameEngine._types.index("camels") for i in self.hand)
+            return sum(i < GameEngine._types.index("camel") for i in self.hand)
