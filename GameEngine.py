@@ -65,7 +65,7 @@ class GameEngine:
         return {
             "num_deck" : len(self._deck),
             "market" : [self._types[idx] for idx in self._market],
-            "tokens_left" : {self._types[key]:value for key,value in self._tokens},
+            "tokens_left" : {self._types[key]:value for key,value in self._tokens.items()},
             "bonus_num_left" : {key:len(value) for key,value in self._bonus_tokens.items()},
             "my_hand" : [self._types[idx] for idx in me.hand],
             "my_tokens" : me.tokens,
@@ -199,6 +199,9 @@ class GameEngine:
     
     def _do_sell_cards(self, sell_idx):
         # Already checked for empty list / None in do_action
+        # If it's a single int, convert to list
+        if type(sell_idx) is int:
+            sell_idx = [sell_idx]
         # Make sure all indices are in the hand
         if max(sell_idx) > len(self._players[self.whos_turn].hand):
             print(f"Index out of range ({max(sell_idx)})! Only {len(self._players[self.whos_turn].hand)} cards in hand!")
@@ -216,6 +219,10 @@ class GameEngine:
         # Make sure type isn't a camel
         if selling_type == self._types.index("camel"):
             print("You can't sell camels, you monster!")
+            return False
+        # Make sure there's at least two if silver, gold, or diamond
+        if (self._types[selling_type] in ["silver","gold","diamond"]) and (len(sell_idx) < 2):
+            print("You can must sell at least two when selling silver, gold, or diamond!")
             return False
         
         # Do the action
@@ -256,6 +263,11 @@ class GameEngine:
         return True
     
     def _do_trade_cards(self, trade_in, trade_out):
+        # If it's a single int, convert to list
+        if type(trade_in) is int:
+            trade_in = [trade_in]
+        if type(trade_out) is int:
+            trade_out = [trade_out]
         # Make sure lengths are same
         if len(trade_in) != len(trade_out):
             print("Trade in and trade out must be same length!")
@@ -291,6 +303,10 @@ class GameEngine:
         out_types = [self._players[self.whos_turn].hand[idx] for idx in trade_out]
         if not set(in_types).isdisjoint(out_types):
             print(f"You can't have the same item type on both sides of a trade! In types: {in_types}, out types: {out_types}")
+            return False
+        # Make sure the trade doesn't result in too many cards (>7)
+        if self._players[self.whos_turn].num_cards() + out_types.count(self._types.index("camel")) > 7:
+            print(f"Trade would result in too many cards in hand ({self._players[self.whos_turn].num_cards() + out_types.count(self._types.index('camel'))})")
             return False
         
         # Do the trade

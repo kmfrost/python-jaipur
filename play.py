@@ -6,6 +6,7 @@ def main():
     players = [Player(game_engine), Player(game_engine)]
     while not game_engine.is_done():
         players[game_engine.whos_turn].take_action()
+    game_engine.get_scores()
 
 if __name__ == "__main__":
     main()
