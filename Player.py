@@ -32,9 +32,6 @@ class Player:
                     print(f"Your hand is: {[f'{idx}: {x}' for idx, x in enumerate(game_state['my_hand'])]}")
                     print(f"The market is: {[f'{idx}: {x}' for idx, x in enumerate(game_state['market'])]}")
                 if action_type == "g":          
-                    # grab_idx = -1
-                    # while not 0 <= grab_idx < len(game_state['market']):
-                    #     grab_idx = int(input("Which market index would you like to grab? "))
                     grab_idx = int(input("Which market index would you like to grab? "))
                     if grab_idx != "r":
                         success = self.game_engine.do_action(action_type, grab_idx=grab_idx)

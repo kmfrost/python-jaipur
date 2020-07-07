@@ -88,8 +88,8 @@ class GameEngine:
             score0 = sum(self._players[0].tokens) + sum([sum(value) for key,value in self._players[0].bonus_tokens.items()])
             score1 = sum(self._players[1].tokens) + sum([sum(value) for key,value in self._players[1].bonus_tokens.items()])
 
-            camels0 = self._players[0].hand.count(self._types.index("camels"))
-            camels1 = self._players[1].hand.count(self._types.index("camels"))
+            camels0 = self._players[0].hand.count(self._types.index("camel"))
+            camels1 = self._players[1].hand.count(self._types.index("camel"))
             if camels0 > camels1:
                 score0 = score0 + 5
                 print(f"Player 1 got the camel bonus ({camels0} vs {camels1} camels).")
