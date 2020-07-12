@@ -166,10 +166,10 @@ class GameEngine:
             self.whos_turn = self.whos_turn ^ 1
             self._last_action = {
                 "top": top,
-                "sell_idx": sell_idx,
+                # "sell_idx": sell_idx,
                 "grab_idx": grab_idx,
                 "trade_in": trade_in,
-                "trade_out": trade_out
+                # "trade_out": trade_out
                 }
             print(f"It is now Player {self.whos_turn + 1}'s turn.")
         return success
