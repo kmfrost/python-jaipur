@@ -1,6 +1,9 @@
 import random
 import numpy as np
+from collections import Counter
+
 from Player import Player
+
 
 class RandomPlayer(Player):
     """This player takes random (valid) moves. Used mostly for testing. And making yourself feel good about yourself.
@@ -13,7 +16,7 @@ class RandomPlayer(Player):
             my_goods = [x for x in game_state['my_hand'] if x != "camel"]
             market_goods = [x for x in game_state['market'] if x != "camel"]            
             # try:
-            valid_moves = ["c", "g", "s", "t'"]
+            valid_moves = ["c", "g", "s", "t"]
             # do some initial checks to remove invalid moves
             if "camel" not in game_state["market"]:
                 valid_moves.remove("c")
@@ -21,6 +24,7 @@ class RandomPlayer(Player):
                 valid_moves.remove("g")
             if len(my_goods) == 0:
                 valid_moves.remove("s")
+            if len(game_state['my_hand']) < 2:
                 valid_moves.remove("t")
                 
             # Cannot sell silver/gold/diamond if you have less than 2
@@ -30,7 +34,7 @@ class RandomPlayer(Player):
                     disallowed_sells.append(each)
                 
             my_sellable_goods = [x for x in my_goods if x not in disallowed_sells]
-            if len(my_sellable_goods) == 0:
+            if len(my_sellable_goods) == 0 and "s" in valid_moves:
                 valid_moves.remove("s")
                 
             
@@ -48,20 +52,35 @@ class RandomPlayer(Player):
     
                 success = self.game_engine.do_action(action_type, sell_idx=sell_idx)
             elif action_type == "t":
-                temp_out = game_state['my_hand']
-                temp_market = market_goods
+                # operate by 3 strikes and you're out
+                num_strikes = 0
+                
                 trade_in = []
                 trade_out = []
-                for num_trades in random.randrange(min(len(game_state['market']), len(game_state['my_hand']))):
-                    try:
-                        temp_trade_out = random.randrange(len(temp_out))
-                        temp_trade_in = random.choice([i for i, x in enumerate(temp_market) if x != temp_out[temp_trade_out]])
-                        trade_out.append(temp_out.pop(temp_trade_out))
-                        trade_in.append(temp_market.pop(temp_trade_in))
-                    except IndexError:
-                        # if you pick something that doesn't have a valid trade, move on
-                        pass
-                
+                # must trade at least 2 cards, cannot trade more cards than are in the market or your hand
+                valid = False
+                while not valid:
+                    num_trades = random.randint(2, min(len(game_state['market']), len(game_state['my_hand'])))
+                    # pick num_trades cards from your own hand
+                    trade_out = random.sample(range(len(game_state['my_hand'])), num_trades)
+                    trade_out_types = [game_state['my_hand'][x] for x in trade_out]
+                    market_options = [x for x in game_state['market'] if x not in trade_out_types and x != "camel"]                    
+                    if len(market_options) >= len(trade_out):
+                        # randomly sample from the valid trades
+                        trade_in_types = random.sample(market_options, num_trades)
+                        trade_in = []
+                        # match those types up with indices in the market
+                        for each_type, num_to_trade in Counter(trade_in_types).items():
+                            indices = [i for i, x in enumerate(game_state['market']) if x == each_type]
+                            trade_in.extend(indices[:num_to_trade])                       
+                        valid = True
+                        
+                    # hacky fail-safe to ensure you don't get stuck in an infinite loop!
+                    else:
+                        num_strikes += 1
+                    if num_strikes == 3:
+                        break
+
                 success = self.game_engine.do_action(action_type, trade_in=trade_in, trade_out=trade_out)
             # except:
             #     pass
