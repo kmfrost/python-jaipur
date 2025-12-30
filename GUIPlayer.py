@@ -87,6 +87,9 @@ class GUIPlayer(Player):
         self._status_timer = 0
         self._action_complete = False
 
+        # Track which player index we are (set on first take_action call)
+        self._my_player_index = None
+
         # Create button rects
         self._buttons = self._create_buttons()
 
@@ -113,6 +116,10 @@ class GUIPlayer(Player):
 
     def take_action(self):
         """Main game loop for player's turn."""
+        # Track our player index on first call
+        if self._my_player_index is None:
+            self._my_player_index = self.game_engine.whos_turn
+
         self._action_complete = False
         self._selected_hand = []
         self._selected_market = []
@@ -284,7 +291,7 @@ class GUIPlayer(Player):
         return rects
 
     def _get_camel_card_rects(self, goods, camels):
-        """Get rectangles for camel cards in hand."""
+        """Get rectangles for camel cards in hand (stacked if too many)."""
         rects = []
         if not camels:
             return rects
@@ -292,8 +299,14 @@ class GUIPlayer(Player):
         # Camels start after goods with a gap
         camel_start_x = self.MAIN_AREA_X + len(goods) * (self.CARD_SIZE[0] + self.CARD_SPACING) + 40
 
+        max_camels_full = 4  # Show up to 4 fully spaced, then stack
         for i in range(len(camels)):
-            x = camel_start_x + i * (self.CARD_SIZE[0] + self.CARD_SPACING)
+            if i < max_camels_full:
+                x = camel_start_x + i * (self.CARD_SIZE[0] + self.CARD_SPACING)
+            else:
+                # Stack remaining camels with small offset
+                x = camel_start_x + max_camels_full * (self.CARD_SIZE[0] + self.CARD_SPACING) + (i - max_camels_full) * 15
+
             y = self.PLAYER_HAND_Y
             original_idx = camels[i][0]
             if original_idx in self._selected_hand:
@@ -397,16 +410,23 @@ class GUIPlayer(Player):
             camel_rects = self._get_camel_card_rects(goods, camels)
             camel_start_x = self.MAIN_AREA_X + len(goods) * (self.CARD_SIZE[0] + self.CARD_SPACING) + 40
 
-            # Camel area background
-            camel_area = pygame.Rect(camel_start_x - 10, self.PLAYER_HAND_Y - 30,
-                                     len(camels) * (self.CARD_SIZE[0] + self.CARD_SPACING) + 15,
-                                     self.CARD_SIZE[1] + 40)
+            # Calculate camel area width (stacked camels take less space)
+            max_camels_full = 4  # Show up to 4 camels fully, stack the rest
+            if len(camels) <= max_camels_full:
+                camel_width = len(camels) * (self.CARD_SIZE[0] + self.CARD_SPACING)
+            else:
+                camel_width = max_camels_full * (self.CARD_SIZE[0] + self.CARD_SPACING) + 20
+
+            # Camel area background - positioned to not overlap labels
+            camel_area = pygame.Rect(camel_start_x - 10, self.PLAYER_HAND_Y - 5,
+                                     camel_width + 15,
+                                     self.CARD_SIZE[1] + 15)
             pygame.draw.rect(self._screen, self.CAMEL_BG_COLOR, camel_area)
             pygame.draw.rect(self._screen, self.TEXT_COLOR, camel_area, 1)
 
-            # Camel label
-            self._font_small.render_to(self._screen, (camel_start_x, self.PLAYER_HAND_Y - 25),
-                                       f"Camels - click to trade ({len(camels)})", self.TEXT_COLOR)
+            # Camel label - above the camel area
+            self._font_small.render_to(self._screen, (camel_start_x, self.PLAYER_HAND_Y - 20),
+                                       f"Camels ({len(camels)}) - click to trade", self.TEXT_COLOR)
 
             for i, ((original_idx, card_type), rect) in enumerate(zip(camels, camel_rects)):
                 # Draw selection highlight
@@ -571,7 +591,7 @@ class GUIPlayer(Player):
                                    "(Final scores include camel bonus)", (180, 180, 180))
 
     def show_game_over(self, scores, winner):
-        """Display game over screen."""
+        """Display game over screen. Returns True to play again, False to exit."""
         # Render final state first
         self._render()
 
@@ -582,7 +602,7 @@ class GUIPlayer(Player):
         self._screen.blit(overlay, (0, 0))
 
         # Game over box
-        box_rect = pygame.Rect(self.WINDOW_SIZE[0]//2 - 200, self.WINDOW_SIZE[1]//2 - 120, 400, 240)
+        box_rect = pygame.Rect(self.WINDOW_SIZE[0]//2 - 200, self.WINDOW_SIZE[1]//2 - 140, 400, 280)
         pygame.draw.rect(self._screen, self.PANEL_COLOR, box_rect)
         pygame.draw.rect(self._screen, self.HIGHLIGHT_COLOR, box_rect, 3)
 
@@ -592,11 +612,23 @@ class GUIPlayer(Player):
         self._font_large.render_to(self._screen, (box_rect.centerx - text_rect.width // 2, box_rect.y + 20),
                                    title, self.HIGHLIGHT_COLOR)
 
-        # Determine which player is which
-        # The GUI player is always player 0 in the players list
-        # scores[0] is player 0, scores[1] is player 1
-        your_score = scores[0]
-        opponent_score = scores[1]
+        # Use tracked player index to correctly assign scores
+        my_idx = self._my_player_index if self._my_player_index is not None else 0
+        opp_idx = 1 - my_idx
+
+        your_score = scores[my_idx]
+        opponent_score = scores[opp_idx]
+
+        # Determine if we won based on our player index
+        if winner == my_idx:
+            result = "YOU WIN!"
+            result_color = self.HIGHLIGHT_COLOR
+        elif winner == opp_idx:
+            result = "YOU LOSE!"
+            result_color = self.ERROR_COLOR
+        else:
+            result = "IT'S A TIE!"
+            result_color = self.TEXT_COLOR
 
         # Scores
         y = box_rect.y + 70
@@ -608,33 +640,44 @@ class GUIPlayer(Player):
 
         # Winner
         y += 50
-        if winner == 0:
-            result = "YOU WIN!"
-            color = self.HIGHLIGHT_COLOR
-        elif winner == 1:
-            result = "YOU LOSE!"
-            color = self.ERROR_COLOR
-        else:
-            result = "IT'S A TIE!"
-            color = self.TEXT_COLOR
+        text_surface, text_rect = self._font_large.render(result, result_color)
+        self._font_large.render_to(self._screen, (box_rect.centerx - text_rect.width // 2, y), result, result_color)
 
-        text_surface, text_rect = self._font_large.render(result, color)
-        self._font_large.render_to(self._screen, (box_rect.centerx - text_rect.width // 2, y), result, color)
+        # Buttons
+        y += 60
+        new_game_rect = pygame.Rect(box_rect.centerx - 150, y, 130, 40)
+        exit_rect = pygame.Rect(box_rect.centerx + 20, y, 130, 40)
 
-        # Instructions
-        y += 50
-        self._font_small.render_to(self._screen, (box_rect.centerx - 70, y),
-                                   "Press any key to exit", (180, 180, 180))
+        pygame.draw.rect(self._screen, self.BUTTON_COLOR, new_game_rect)
+        pygame.draw.rect(self._screen, self.TEXT_COLOR, new_game_rect, 2)
+        pygame.draw.rect(self._screen, self.BUTTON_COLOR, exit_rect)
+        pygame.draw.rect(self._screen, self.TEXT_COLOR, exit_rect, 2)
+
+        # Button labels
+        text_surface, text_rect = self._font.render("New Game", self.BUTTON_TEXT_COLOR)
+        self._font.render_to(self._screen, (new_game_rect.centerx - text_rect.width // 2,
+                                            new_game_rect.centery - text_rect.height // 2),
+                            "New Game", self.BUTTON_TEXT_COLOR)
+
+        text_surface, text_rect = self._font.render("Exit", self.BUTTON_TEXT_COLOR)
+        self._font.render_to(self._screen, (exit_rect.centerx - text_rect.width // 2,
+                                            exit_rect.centery - text_rect.height // 2),
+                            "Exit", self.BUTTON_TEXT_COLOR)
 
         pygame.display.flip()
 
-        # Wait for key press
-        waiting = True
-        while waiting:
+        # Wait for button click
+        while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    waiting = False
-                elif event.type == pygame.KEYDOWN:
-                    waiting = False
+                    return False
                 elif event.type == pygame.MOUSEBUTTONDOWN:
-                    waiting = False
+                    if new_game_rect.collidepoint(event.pos):
+                        return True
+                    elif exit_rect.collidepoint(event.pos):
+                        return False
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        return False
+                    elif event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
+                        return True
