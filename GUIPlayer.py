@@ -153,14 +153,21 @@ class GUIPlayer(Player):
                 self._handle_button_click(button_name, game_state)
                 return
 
-        # Check hand card clicks (goods only)
-        goods, _ = self._split_hand(game_state['my_hand'])
+        # Check hand card clicks (goods - select all of type)
+        goods, camels = self._split_hand(game_state['my_hand'])
         hand_rects = self._get_hand_card_rects(goods)
         for i, rect in enumerate(hand_rects):
             if rect.collidepoint(pos):
-                original_idx = goods[i][0]  # Get original index in full hand
                 card_type = goods[i][1]
                 self._toggle_hand_selection_by_type(game_state['my_hand'], card_type)
+                return
+
+        # Check camel clicks (for trading - select individual camels)
+        camel_rects = self._get_camel_card_rects(goods, camels)
+        for i, rect in enumerate(camel_rects):
+            if rect.collidepoint(pos):
+                original_idx = camels[i][0]
+                self._toggle_single_hand_selection(original_idx)
                 return
 
         # Check market card clicks
@@ -171,7 +178,7 @@ class GUIPlayer(Player):
                 return
 
     def _toggle_hand_selection_by_type(self, hand, card_type):
-        """Toggle selection of all cards of a type in hand."""
+        """Toggle selection of all cards of a type in hand (for goods)."""
         # Get all indices of this card type (excluding camels)
         indices_of_type = [i for i, card in enumerate(hand) if card == card_type and card != "camel"]
 
@@ -187,6 +194,14 @@ class GUIPlayer(Player):
                 if idx not in self._selected_hand:
                     self._selected_hand.append(idx)
 
+        self._selected_hand.sort()
+
+    def _toggle_single_hand_selection(self, index):
+        """Toggle selection of a single card in hand (for camels in trading)."""
+        if index in self._selected_hand:
+            self._selected_hand.remove(index)
+        else:
+            self._selected_hand.append(index)
         self._selected_hand.sort()
 
     def _toggle_market_selection(self, index):
@@ -257,13 +272,30 @@ class GUIPlayer(Player):
         if not goods:
             return rects
 
-        total_width = len(goods) * (self.CARD_SIZE[0] + self.CARD_SPACING) - self.CARD_SPACING
         start_x = self.MAIN_AREA_X
 
         for i in range(len(goods)):
             x = start_x + i * (self.CARD_SIZE[0] + self.CARD_SPACING)
             y = self.PLAYER_HAND_Y
             original_idx = goods[i][0]
+            if original_idx in self._selected_hand:
+                y -= 20  # Raise selected cards
+            rects.append(pygame.Rect(x, y, self.CARD_SIZE[0], self.CARD_SIZE[1]))
+        return rects
+
+    def _get_camel_card_rects(self, goods, camels):
+        """Get rectangles for camel cards in hand."""
+        rects = []
+        if not camels:
+            return rects
+
+        # Camels start after goods with a gap
+        camel_start_x = self.MAIN_AREA_X + len(goods) * (self.CARD_SIZE[0] + self.CARD_SPACING) + 40
+
+        for i in range(len(camels)):
+            x = camel_start_x + i * (self.CARD_SIZE[0] + self.CARD_SPACING)
+            y = self.PLAYER_HAND_Y
+            original_idx = camels[i][0]
             if original_idx in self._selected_hand:
                 y -= 20  # Raise selected cards
             rects.append(pygame.Rect(x, y, self.CARD_SIZE[0], self.CARD_SIZE[1]))
@@ -304,33 +336,19 @@ class GUIPlayer(Player):
         self._render_scores(game_state)
 
     def _render_opponent(self, game_state):
-        """Render opponent's hand - goods as card backs, camels shown separately."""
+        """Render opponent's hand as card backs (only show goods, camels are hidden)."""
         num_goods = game_state['enemy_num_goods']
-        num_camels = game_state['enemy_num_camels']
 
         start_x = self.MAIN_AREA_X
 
-        # Label
+        # Label - only show goods count
         self._font.render_to(self._screen, (start_x, self.OPPONENT_HAND_Y - 25),
-                            f"Opponent: {num_goods} goods, {num_camels} camels", self.TEXT_COLOR)
+                            f"Opponent's Goods: {num_goods}", self.TEXT_COLOR)
 
-        # Draw goods as card backs
+        # Draw only goods as backs (camels completely hidden)
         for i in range(num_goods):
             x = start_x + i * (self.CARD_SIZE[0] + self.CARD_SPACING)
             self._screen.blit(self._card_images["back"], (x, self.OPPONENT_HAND_Y))
-
-        # Draw camels separately (shown face up since camels are public info)
-        camel_start_x = start_x + num_goods * (self.CARD_SIZE[0] + self.CARD_SPACING) + 30
-        if num_camels > 0:
-            # Draw camel area background
-            camel_area = pygame.Rect(camel_start_x - 5, self.OPPONENT_HAND_Y - 5,
-                                     num_camels * (self.CARD_SIZE[0] + self.CARD_SPACING) + 5,
-                                     self.CARD_SIZE[1] + 10)
-            pygame.draw.rect(self._screen, self.CAMEL_BG_COLOR, camel_area)
-
-            for i in range(num_camels):
-                x = camel_start_x + i * (self.CARD_SIZE[0] + self.CARD_SPACING)
-                self._screen.blit(self._card_images["camel"], (x, self.OPPONENT_HAND_Y))
 
     def _render_market(self, game_state):
         """Render the market cards."""
@@ -374,8 +392,9 @@ class GUIPlayer(Player):
 
             self._screen.blit(self._card_images[card_type], rect.topleft)
 
-        # Render camels separately
+        # Render camels separately (clickable for trading)
         if camels:
+            camel_rects = self._get_camel_card_rects(goods, camels)
             camel_start_x = self.MAIN_AREA_X + len(goods) * (self.CARD_SIZE[0] + self.CARD_SPACING) + 40
 
             # Camel area background
@@ -387,11 +406,15 @@ class GUIPlayer(Player):
 
             # Camel label
             self._font_small.render_to(self._screen, (camel_start_x, self.PLAYER_HAND_Y - 25),
-                                       f"Your Camels ({len(camels)})", self.TEXT_COLOR)
+                                       f"Camels - click to trade ({len(camels)})", self.TEXT_COLOR)
 
-            for i, (original_idx, card_type) in enumerate(camels):
-                x = camel_start_x + i * (self.CARD_SIZE[0] + self.CARD_SPACING)
-                self._screen.blit(self._card_images[card_type], (x, self.PLAYER_HAND_Y))
+            for i, ((original_idx, card_type), rect) in enumerate(zip(camels, camel_rects)):
+                # Draw selection highlight
+                if original_idx in self._selected_hand:
+                    highlight_rect = rect.inflate(6, 6)
+                    pygame.draw.rect(self._screen, self.HIGHLIGHT_COLOR, highlight_rect, 3)
+
+                self._screen.blit(self._card_images[card_type], rect.topleft)
 
     def _render_deck(self, game_state):
         """Render the deck with card count."""
@@ -468,8 +491,35 @@ class GUIPlayer(Player):
             text_y = rect.centery - text_rect.height // 2
             self._font.render_to(self._screen, (text_x, text_y), label, self.BUTTON_TEXT_COLOR)
 
+    def _format_last_action(self):
+        """Format the last action as a human-readable string."""
+        last_action = self.game_engine.get_last_action()
+        if last_action is None:
+            return "Game just started"
+
+        action_type = last_action.get("top", "")
+        types = ["leather", "spice", "cloth", "silver", "gold", "diamond", "camel"]
+
+        if action_type == "c":
+            n = last_action.get("n_camels", 0)
+            return f"Opponent took {n} camel(s)"
+        elif action_type == "g":
+            grab_type = last_action.get("grab_type", 0)
+            return f"Opponent grabbed {types[grab_type]}"
+        elif action_type == "s":
+            sell_type = last_action.get("sell_type", 0)
+            n = last_action.get("n_sold", 0)
+            return f"Opponent sold {n} {types[sell_type]}"
+        elif action_type == "t":
+            trade_out = last_action.get("trade_out", [])
+            trade_in = last_action.get("trade_in", [])
+            out_names = [types[t] for t in trade_out]
+            in_names = [types[t] for t in trade_in]
+            return f"Opponent traded {out_names} for {in_names}"
+        return ""
+
     def _render_status(self, game_state):
-        """Render status message."""
+        """Render status message and opponent's last move."""
         # Status bar at bottom
         status_y = self.BUTTON_Y + 5
         status_x = 620
@@ -480,6 +530,13 @@ class GUIPlayer(Player):
         # Instructions
         self._font_small.render_to(self._screen, (status_x, status_y + 22),
                                    "ESC to clear selection", (180, 180, 180))
+
+        # Opponent's last move - display near opponent's area
+        last_action_text = self._format_last_action()
+        if last_action_text:
+            # Display below opponent's hand
+            self._font.render_to(self._screen, (self.MAIN_AREA_X, self.OPPONENT_HAND_Y + self.CARD_SIZE[1] + 15),
+                                f"Last move: {last_action_text}", (200, 200, 100))
 
     def _render_scores(self, game_state):
         """Render score information."""
