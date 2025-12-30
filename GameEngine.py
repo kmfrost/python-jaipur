@@ -154,8 +154,11 @@ class GameEngine:
                 # Need the trade in indices and trade out indices to complete the trade action
                 return False
             success, info = self._do_trade_cards(trade_in, trade_out)
-        else: 
-            print(f"Top-level action {top} not recognized! Please choose from: c, s, g, t.")
+        elif top == "d":
+            # Selects the "draw from deck" action (house rule)
+            success, info = self._do_draw_from_deck()
+        else:
+            print(f"Top-level action {top} not recognized! Please choose from: c, s, g, t, d.")
             return False      
         
         if success:
@@ -347,6 +350,32 @@ class GameEngine:
         return True, info
     
     
+    def _do_draw_from_deck(self):
+        """Draw a card blind from the deck (house rule, not standard Jaipur)."""
+        info = None
+
+        # Check if deck is empty
+        if len(self._deck) == 0:
+            print("The deck is empty!")
+            return False, info
+
+        # Check if hand is full (7 non-camel cards)
+        if self._players[self.whos_turn].num_cards() >= 7:
+            print(f"Player {self.whos_turn + 1} already has 7 goods in hand. Can't draw more.")
+            return False, info
+
+        # Draw the top card
+        drawn_card = self._deck.pop()
+        card_type = self._types[drawn_card]
+
+        # If it's a camel, it just goes to hand (no limit on camels)
+        # If it's a good, we already checked the limit
+        self._players[self.whos_turn].hand.append(drawn_card)
+
+        print(f"Player {self.whos_turn + 1} drew a {card_type} from the deck.")
+        info = {"draw_type": drawn_card}
+        return True, info
+
     def _replenish_market(self):
         try:
             self._market.append(self._deck.pop())

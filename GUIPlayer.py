@@ -14,7 +14,7 @@ class GUIPlayer(Player):
     """A pygame-based GUI player for Jaipur."""
 
     # Window and layout constants
-    WINDOW_SIZE = (1100, 650)
+    WINDOW_SIZE = (1280, 720)
     CARD_SIZE = (72, 100)
     CARD_SPACING = 10
 
@@ -30,13 +30,13 @@ class GUIPlayer(Player):
     CAMEL_BG_COLOR = (60, 110, 75)  # Slightly different green for camel area
 
     # Layout positions
-    MARKET_Y = 250
-    PLAYER_HAND_Y = 450
-    PLAYER_CAMELS_Y = 450
-    OPPONENT_HAND_Y = 50
+    MARKET_Y = 280
+    PLAYER_HAND_Y = 500
+    PLAYER_CAMELS_Y = 500
+    OPPONENT_HAND_Y = 60
     DECK_X = 60
-    TOKEN_PANEL_X = 850
-    BUTTON_Y = 580
+    TOKEN_PANEL_X = 1020
+    BUTTON_Y = 650
     MAIN_AREA_X = 150  # Left margin for main card area
 
     # Card type to image file mapping
@@ -105,6 +105,7 @@ class GUIPlayer(Player):
             "grab": pygame.Rect(start_x + (button_width + button_spacing), self.BUTTON_Y, button_width, button_height),
             "sell": pygame.Rect(start_x + 2 * (button_width + button_spacing), self.BUTTON_Y, button_width, button_height),
             "trade": pygame.Rect(start_x + 3 * (button_width + button_spacing), self.BUTTON_Y, button_width, button_height),
+            "draw": pygame.Rect(start_x + 4 * (button_width + button_spacing), self.BUTTON_Y, button_width, button_height),
         }
         return buttons
 
@@ -262,6 +263,11 @@ class GUIPlayer(Player):
             )
             if not success:
                 self._show_error("Invalid trade! Check rules.")
+
+        elif button_name == "draw":
+            success = self.game_engine.do_action("d")
+            if not success:
+                self._show_error("Can't draw - deck empty or hand full!")
 
         if success:
             self._action_complete = True
@@ -492,7 +498,8 @@ class GUIPlayer(Player):
             "camels": "Take Camels",
             "grab": "Grab",
             "sell": "Sell",
-            "trade": "Trade"
+            "trade": "Trade",
+            "draw": "Draw"
         }
 
         for button_name, rect in self._buttons.items():
@@ -536,13 +543,16 @@ class GUIPlayer(Player):
             out_names = [types[t] for t in trade_out]
             in_names = [types[t] for t in trade_in]
             return f"Opponent traded {out_names} for {in_names}"
+        elif action_type == "d":
+            draw_type = last_action.get("draw_type", 0)
+            return f"Opponent drew {types[draw_type]} from deck"
         return ""
 
     def _render_status(self, game_state):
         """Render status message and opponent's last move."""
         # Status bar at bottom
         status_y = self.BUTTON_Y + 5
-        status_x = 620
+        status_x = 750
 
         color = self.ERROR_COLOR if self._status_timer > 0 else self.TEXT_COLOR
         self._font.render_to(self._screen, (status_x, status_y), self._status_message, color)
@@ -561,7 +571,7 @@ class GUIPlayer(Player):
     def _render_scores(self, game_state):
         """Render score information."""
         x = self.TOKEN_PANEL_X
-        y = 350
+        y = 400
 
         # Panel
         panel_rect = pygame.Rect(x - 10, y - 10, 230, 130)
@@ -571,14 +581,19 @@ class GUIPlayer(Player):
         self._font_large.render_to(self._screen, (x, y), "Scores (tokens)", self.TEXT_COLOR)
         y += 30
 
-        # Always show from consistent perspective: You vs Opponent
-        my_tokens = sum(game_state['my_tokens'])
-        my_bonus = game_state['my_bonus_num_tokens']
-        my_bonus_count = sum(my_bonus.values())
+        # Use tracked player index to always show correct perspective
+        # Access raw player data to avoid turn-dependent get_state() issues
+        my_idx = self._my_player_index if self._my_player_index is not None else 0
+        opp_idx = 1 - my_idx
 
-        enemy_tokens = sum(game_state['enemy_tokens'])
-        enemy_bonus = game_state['enemy_bonus_num_tokens']
-        enemy_bonus_count = sum(enemy_bonus.values())
+        my_player = self.game_engine._players[my_idx]
+        opp_player = self.game_engine._players[opp_idx]
+
+        my_tokens = sum(my_player.tokens)
+        my_bonus_count = sum(len(v) for v in my_player.bonus_tokens.values())
+
+        enemy_tokens = sum(opp_player.tokens)
+        enemy_bonus_count = sum(len(v) for v in opp_player.bonus_tokens.values())
 
         self._font.render_to(self._screen, (x, y),
                             f"You: {my_tokens} pts ({my_bonus_count} bonus)", self.HIGHLIGHT_COLOR)
