@@ -78,6 +78,7 @@ class RandomPlayer(Player):
         my_hand = game_state['my_hand']
         market = game_state['market']
         market_goods = [x for x in market if x != "camel"]
+        my_goods = [x for x in my_hand if x != "camel"]
 
         # Try up to 10 times to find a valid trade
         for _ in range(10):
@@ -91,6 +92,16 @@ class RandomPlayer(Player):
             # Pick cards from hand to trade out
             trade_out = random.sample(range(len(my_hand)), num_trades)
             trade_out_types = [my_hand[x] for x in trade_out]
+
+            # Check if trading camels for goods would exceed hand limit
+            # New goods count = current goods - goods traded out + goods traded in
+            # Since all market cards traded in are goods (no camels allowed),
+            # and trade_out may include camels, we need to check:
+            # new_goods = current_goods - (non-camel cards in trade_out) + num_trades
+            camels_traded_out = trade_out_types.count("camel")
+            new_goods_count = len(my_goods) + camels_traded_out
+            if new_goods_count > 7:
+                continue  # This trade would exceed hand limit, try again
 
             # Find market cards that don't overlap with trade_out types and aren't camels
             market_options = [x for x in market if x not in trade_out_types and x != "camel"]

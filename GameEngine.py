@@ -17,7 +17,7 @@ class GameEngine:
     def _reset(self):
         self._tokens = {
             0: [1, 1, 1, 1, 1, 1, 2, 3, 4],  # leather
-            1: [1, 1, 2, 2, 3 ,3, 5],  # spice
+            1: [1, 1, 2, 2, 3, 3, 5],  # spice
             2: [1, 1, 2, 2, 3, 3, 5],  # cloth
             3: [5, 5, 5, 5, 5],  # silver
             4: [5, 5, 5, 6, 6],  # gold
@@ -48,8 +48,8 @@ class GameEngine:
 
         
     def is_done(self):
-        # Mark the number of empty stacks 
-        empty_stacks = sum([1 for l in self._tokens.values() if not l]) > 3
+        # Mark the number of empty stacks
+        empty_stacks = sum([1 for l in self._tokens.values() if not l]) >= 3
         if empty_stacks:
             print("3 of the goods stacks are empty. The game is now over.")
         
@@ -135,7 +135,7 @@ class GameEngine:
     
     def do_action(self, top, sell_idx=None, grab_idx=None, trade_in=None, trade_out=None):
         if top == "c":
-            # Selcts the "take camels" action
+            # Selects the "take camels" action
             success, info = self._do_take_camels()
         elif top == "s":
             # Selects the "sell" action
@@ -198,13 +198,20 @@ class GameEngine:
     
     def _do_sell_cards(self, sell_idx):
         info = None
-        
+
         # Already checked for empty list / None in do_action
         # If it's a single int, convert to list
         if type(sell_idx) is int:
             sell_idx = [sell_idx]
-        # Make sure all indices are in the hand
-        if max(sell_idx) > len(self._players[self.whos_turn].hand):
+        # Make sure hand is not empty
+        if len(self._players[self.whos_turn].hand) == 0:
+            print("No cards in hand to sell!")
+            return False, info
+        # Make sure all indices are valid (non-negative and within range)
+        if min(sell_idx) < 0:
+            print(f"Negative index not allowed ({min(sell_idx)})!")
+            return False, info
+        if max(sell_idx) >= len(self._players[self.whos_turn].hand):
             print(f"Index out of range ({max(sell_idx)})! Only {len(self._players[self.whos_turn].hand)} cards in hand!")
             return False, info
         # Check for duplicates
@@ -223,7 +230,7 @@ class GameEngine:
             return False, info
         # Make sure there's at least two if silver, gold, or diamond
         if (self._types[selling_type] in ["silver","gold","diamond"]) and (len(sell_idx) < 2):
-            print("You can must sell at least two when selling silver, gold, or diamond!")
+            print("You must sell at least two when selling silver, gold, or diamond!")
             return False, info
         
         # Do the action
@@ -256,7 +263,11 @@ class GameEngine:
         if self._players[self.whos_turn].num_cards() == 7:
             print(f"Player {self.whos_turn + 1} already has 7 cards in their hand. Pick a different action.")
             return False, info
-    
+
+        if grab_idx < 0 or grab_idx >= len(self._market):
+            print(f"grab_idx {grab_idx} is out of range! Market has {len(self._market)} cards.")
+            return False, info
+
         if self._types[self._market[grab_idx]] == "camel":
             print("You cannot grab a single camel. Please select a different action.")
             return False, info
@@ -285,8 +296,14 @@ class GameEngine:
         if len(trade_in) <= 1:
             print("Must trade at least 2 items with market!")
             return False, info
-        # Make sure all indices are in the hand
-        if max(trade_out) > len(self._players[self.whos_turn].hand):
+        # Make sure all indices are valid (non-negative and within range)
+        if min(trade_out) < 0:
+            print(f"Negative trade_out index not allowed ({min(trade_out)})!")
+            return False, info
+        if min(trade_in) < 0:
+            print(f"Negative trade_in index not allowed ({min(trade_in)})!")
+            return False, info
+        if max(trade_out) >= len(self._players[self.whos_turn].hand):
             print(f"trade_out index out of range ({max(trade_out)})! Only {len(self._players[self.whos_turn].hand)} cards in hand!")
             return False, info
         # Check for duplicates for out
@@ -294,7 +311,7 @@ class GameEngine:
             print(f"Duplicate indices in trade_out list! trade_out = {trade_out}")
             return False, info
         # Make sure all indices are in the market
-        if max(trade_in) > len(self._market):
+        if max(trade_in) >= len(self._market):
             print(f"trade_in index out of range ({max(trade_in)})! Only {len(self._market)} cards in market!")
             return False, info
         # Check for duplicates for in

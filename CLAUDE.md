@@ -22,6 +22,10 @@ This starts an interactive game with Player 1 as human (keyboard input) and Play
 
 No setup.py/pyproject.toml exists - pure Python with manual dependency installation.
 
+## Package Management
+
+Use `uv` for packag management within the `.venv` virtual environment.
+
 ## Architecture
 
 ### Core Classes

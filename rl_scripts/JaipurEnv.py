@@ -266,6 +266,7 @@ class JaipurEnv(gym.Env):
         my_hand = state['my_hand']
         market = state['market']
         market_goods = [x for x in market if x != "camel"]
+        my_goods = [x for x in my_hand if x != "camel"]
 
         for _ in range(10):
             max_trade = min(len(market_goods), len(my_hand))
@@ -275,6 +276,12 @@ class JaipurEnv(gym.Env):
             num_trades = random.randint(2, max_trade)
             trade_out = random.sample(range(len(my_hand)), num_trades)
             trade_out_types = [my_hand[x] for x in trade_out]
+
+            # Check if trading camels for goods would exceed hand limit
+            camels_traded_out = trade_out_types.count("camel")
+            new_goods_count = len(my_goods) + camels_traded_out
+            if new_goods_count > 7:
+                continue  # This trade would exceed hand limit, try again
 
             market_options = [x for x in market if x not in trade_out_types and x != "camel"]
 
