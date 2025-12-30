@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
 Play Jaipur with a graphical interface.
-Human player (GUI) vs RandomPlayer AI.
+Human player (GUI) vs RL-trained AI (or RandomPlayer as fallback).
 """
 import sys
 import builtins
 from GameEngine import GameEngine
 from GUIPlayer import GUIPlayer
-from RandomPlayer import RandomPlayer
+from RLPlayer import RLPlayer
 
 
 def play_game(gui_player=None):
@@ -30,7 +30,7 @@ def play_game(gui_player=None):
         gui_player._selected_hand = []
         gui_player._selected_market = []
 
-    ai_player = RandomPlayer(game_engine)
+    ai_player = RLPlayer(game_engine)
     players = [gui_player, ai_player]
 
     # Suppress prints during gameplay
@@ -58,7 +58,7 @@ def play_game(gui_player=None):
 
 def main():
     print("Starting Jaipur GUI...")
-    print("You play against the AI.")
+    print("You play against the RL-trained AI.")
     print()
 
     gui_player = None
