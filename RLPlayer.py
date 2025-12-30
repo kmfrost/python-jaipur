@@ -56,17 +56,34 @@ class RLPlayer(Player):
             print(f"Error loading model: {e}, using random player")
 
     def _load_latest_model(self):
-        """Look for the most recent trained model."""
+        """Look for the most recent trained model, preferring selfplay models."""
         models_dirs = [
             "rl_scripts/models",
             "models",
         ]
 
+        # First, look for selfplay_best model (strongest)
+        for models_dir in models_dirs:
+            best_path = os.path.join(models_dir, "jaipur_selfplay_best")
+            if os.path.exists(best_path + ".zip"):
+                self._load_model(best_path)
+                return
+
+        # Fall back to any selfplay model
+        for models_dir in models_dirs:
+            if os.path.exists(models_dir):
+                models = [f for f in os.listdir(models_dir) if f.startswith("jaipur_selfplay") and not f.startswith("jaipur_selfplay_checkpoint")]
+                if models:
+                    latest = sorted(models)[-1]
+                    model_path = os.path.join(models_dir, latest.replace('.zip', ''))
+                    self._load_model(model_path)
+                    return
+
+        # Fall back to regular PPO model
         for models_dir in models_dirs:
             if os.path.exists(models_dir):
                 models = [f for f in os.listdir(models_dir) if f.startswith("jaipur_ppo")]
                 if models:
-                    # Get most recent (alphabetically last due to timestamp naming)
                     latest = sorted(models)[-1]
                     model_path = os.path.join(models_dir, latest.replace('.zip', ''))
                     self._load_model(model_path)
